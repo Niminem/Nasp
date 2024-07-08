@@ -398,7 +398,7 @@ proc handleScopesCommand(parameters: var Table[string, string]) =
             if scope notin scopes: scopes.add(scope)
     # removing scopes
     if parameters.hasKey("removeScope"):
-        scopes.keepIf(proc(s: string): bool = s != parameters["removeScope"]) # TODO: need others to filter too
+        scopes.keepIf(proc(s: string): bool = s != parameters["removeScope"])
     if parameters.hasKey("removeScopes"):
         var paramScopes: JsonNode
         try:
