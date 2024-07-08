@@ -1,7 +1,7 @@
 # Package
 version       = "0.1.0"
 author        = "Niminem"
-description   = "Nim CLI tool & API wrapper for developing Apps Script projects on your local machine."
+description   = "Nasp is an API wrapper and CLI tool for developing Apps Script projects on your local machine using the Nim programming language."
 license       = "MIT"
 srcDir        = "src"
 installExt    = @["nim"]
