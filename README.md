@@ -46,3 +46,4 @@ Lorem ipsum
 
 TODO:
 - change command "login" to something like `nasp apis --enableScope:"<scope>" --disableScope:"<scope"`
+- add documentation for setting up GCP project. Nasp has to have certain APIs enabled for default scopes, such as google drive and google script APIs (I think that's it actually... need to test). Test with new GCP project, and learn the setup, then make unlisted YouTube video for demonstration.

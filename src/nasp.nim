@@ -1,9 +1,10 @@
-import std/[cmdline, os, httpclient, json, times, parseopt, tables, strutils, osproc, browsers]
+import std/[cmdline, os, httpclient, json, times, parseopt,
+            sequtils, tables, strutils, osproc, browsers]
 import nasplib/[credentials, oauth2, gcp_apis]
 
 
 type Command = enum
-    init, create, clone, pull, push, open, run, login, unknown
+    init, create, clone, pull, push, open, run, scopes, unknown
 
 
 proc gcpTokenRequest*(credsFilePath: string; localHostPort: int = 8080;
@@ -209,7 +210,7 @@ proc handleCreateCommand(parameters: var Table[string, string]) =
 
 proc handlePullOrCloneCommand(parameters: var Table[string, string], cmd: Command) =
     # allowed flags:
-    # --scriptId: string (required)
+    # --scriptId: string (required if cmd == clone, optional otherwise)
     # --versionNumber: int (optional)
     # validate parameters
     if cmd == clone:
@@ -364,15 +365,57 @@ proc handleRunCommand(parameters: var Table[string, string]) =
         else:
             echo "Function executed successfully."
 
-proc handleLoginCommand() =
-    echo "Logging in..."
+proc handleScopesCommand(parameters: var Table[string, string]) =
+    # allowed flags:
+    # --addScope: string (optional) ex: --add: "https://www.googleapis.com/auth/drive"
+    # --addScopes: stringArray (optional) ex: --add: '["https://www.googleapis.com/auth/drive"]'
+    # --removeScope: string (optional) ex: --remove: "https://www.googleapis.com/auth/drive"
+    # --removeScopes: stringArray (optional) ex: --remove: '["https://www.googleapis.com/auth/drive"]'
+    # if no flags provided, it will create a new access file with the current scopes in nasp.json
+
+    echo "Updating scope(s)..."
     if not fileExists("nasp.json"):
         quit("nasp.json not found in current directory. Did you run 'nasp init'?" &
                     "Are you running nasp from the root directory?", 1)
-    let projectInfo = parseFile("nasp.json")
-    echo "Creating new access file..."
-    createAccessFile(projectInfo["creds"].getStr(), scopes=projectInfo["scopes"].to(seq[string]))
-    echo "Login successful. Access info updated in .access.json file."
+
+    # add/remove scopes from parameters to nasp.json
+    var
+        projectInfo = parseFile("nasp.json")
+        scopes = projectInfo["scopes"].to(seq[string])
+    # adding scopes
+    if parameters.hasKey("addScope"):
+        let paramScope = parameters["addScope"]
+        if paramScope notin scopes: scopes.add(paramScope)
+    if parameters.hasKey("addScopes"):
+        var paramScopes: JsonNode
+        try:
+            paramScopes = parameters["addScopes"].parseJson()
+        except JsonParsingError as e:
+            raise newException(JsonParsingError, "Json Parsing error for 'addScopes' parameter.\n" & e.msg)
+        if paramScopes.kind != JArray: quit("Invalid 'addScopes' parameter. Got: " &
+                                            parameters["addScopes"], 1)
+        for scope in paramScopes.to(seq[string]):
+            if scope notin scopes: scopes.add(scope)
+    # removing scopes
+    if parameters.hasKey("removeScope"):
+        scopes.keepIf(proc(s: string): bool = s != parameters["removeScope"]) # TODO: need others to filter too
+    if parameters.hasKey("removeScopes"):
+        var paramScopes: JsonNode
+        try:
+            paramScopes = parameters["removeScopes"].parseJson()
+        except JsonParsingError as e:
+            raise newException(JsonParsingError,
+                              "Json Parsing error for 'removeScopes' parameter.\n" & e.msg)
+        if paramScopes.kind != JArray: quit("Invalid 'removeScopes' parameter. Got: " &
+                                            parameters["removeScopes"], 1)
+        for scope in paramScopes.to(seq[string]):
+            scopes.keepIf(proc(s: string): bool = s != scope)
+    # update nasp.json with new scopes
+    projectInfo["scopes"] = %*scopes
+    writeFile("nasp.json", projectInfo.pretty(2))
+    echo "Scopes updated successfully in nasp.json.\nReauthenticating..."
+    createAccessFile(projectInfo["creds"].getStr(), scopes=scopes)
+    echo "Access info updated in .access.json file."
 
 
 
@@ -387,5 +430,5 @@ when isMainModule:
     of push: handlePushCommand()
     of open: handleOpenCommand(parameters)
     of run: handleRunCommand(parameters)
-    of login: handleLoginCommand()
+    of scopes: handleScopesCommand(parameters)
     of unknown: quit("Invalid command provided.Got: " & parameters["command"], 1)
