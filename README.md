@@ -45,4 +45,5 @@ Lorem ipsum
 
 
 TODO:
+- can we remove the logging scope? we're not doing this, just opening the logging page
 - add documentation for setting up GCP project. Nasp has to have certain APIs enabled for default scopes, such as google drive and google script APIs (I think that's it actually... need to test). Test with new GCP project, and learn the setup, then make unlisted YouTube video for demonstration.

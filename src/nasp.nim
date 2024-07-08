@@ -1,5 +1,4 @@
-import std/[cmdline, os, httpclient, json, times, parseopt,
-            sequtils, tables, strutils, osproc, browsers]
+import std/[cmdline, os, httpclient, json, times, parseopt, tables, strutils, osproc, browsers]
 import nasplib/[credentials, oauth2, gcp_apis]
 
 
@@ -354,7 +353,7 @@ proc handleRunCommand(parameters: var Table[string, string]) =
     echo "Running function: '" & funcName & "' with args: " & (if args != "": args else: "N/A") & " ..."
     let response = runProjectFunction(scriptId, accessToken, $functionData)
     if response.code != Http200:
-        echo "Failed to run function. Got:\nCode: " & $response.code & "\nResponse: " & response.body
+        quit("Failed to run function. Got:\nCode: " & $response.code & "\nResponse: " & response.body, 1)
     let responseJson = parseJson(response.body)
     if responseJson.hasKey("error"):
         echo "Function execution failed. Error details:\n" & responseJson["error"]["details"].pretty(2)
@@ -398,7 +397,10 @@ proc handleScopesCommand(parameters: var Table[string, string]) =
             if scope notin scopes: scopes.add(scope)
     # removing scopes
     if parameters.hasKey("removeScope"):
-        scopes.keepIf(proc(s: string): bool = s != parameters["removeScope"])
+        var s: seq[string]
+        for scope in scopes:
+            if scope != parameters["removeScope"]: s.add(scope)
+        scopes = s
     if parameters.hasKey("removeScopes"):
         var paramScopes: JsonNode
         try:
@@ -409,7 +411,10 @@ proc handleScopesCommand(parameters: var Table[string, string]) =
         if paramScopes.kind != JArray: quit("Invalid 'removeScopes' parameter. Got: " &
                                             parameters["removeScopes"], 1)
         for scope in paramScopes.to(seq[string]):
-            scopes.keepIf(proc(s: string): bool = s != scope)
+            var s: seq[string]
+            for item in scopes.items():
+                if item != scope: s.add(item)
+            scopes = s
     # update nasp.json with new scopes
     projectInfo["scopes"] = %*scopes
     writeFile("nasp.json", projectInfo.pretty(2))
