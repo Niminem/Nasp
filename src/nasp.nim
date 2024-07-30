@@ -104,7 +104,7 @@ proc shouldBeCompiled(file: string): bool =
   defer: f.close()
   if endOfFile(f): return true
   var firstLine = readLine(f)
-  if "#exclude" in firstLine or "# exclude" in firstLine: return false
+  if "exclude" in firstLine: return false
   else: return true
 
 proc buildFromNimFiles(projectDir: string) =
@@ -112,13 +112,26 @@ proc buildFromNimFiles(projectDir: string) =
         let fullPath = projectDir / relFilePath
         if ".nim" notin relFilePath: continue # skip non-nim files
         if not shouldBeCompiled(fullPath): continue # if nim file contains "#exclude" in 1st line, skip
-        let
-            command = "nim js -d:release -d:danger --jsbigint64:off --out:" &
-                    fullPath.replace(".nim", ".js") & " " & fullPath
-            commandOutput = execCmdEx(command)
-        if commandOutput.exitCode != 0:
-            quit("Failed to build js file from nim file: " & fullPath & "\n" &
-                "Output:\n" & commandOutput.output, 1)
+
+        if "_html.nim" notin fullPath: # build js file from nim file
+            let
+                command = "nim js -d:release -d:danger --jsbigint64:off --out:" &
+                        fullPath.replace(".nim", ".js") & " " & fullPath
+                commandOutput = execCmdEx(command)
+            if commandOutput.exitCode != 0:
+                quit("Failed to build js file from nim file: " & fullPath & "\n" &
+                    "Output:\n" & commandOutput.output, 1)
+        else: # build html file from nim file (for use as template in Apps Script HtmlService)
+            let
+                htmlPath = fullPath.replace("_html.nim", ".html")
+                command = "nim js -d:release -d:danger --jsbigint64:off --out:" &
+                        htmlPath & " " & fullPath
+                commandOutput = execCmdEx(command)
+            if commandOutput.exitCode != 0:
+                quit("Failed to build html file from nim file: " & fullPath & "\n" &
+                    "Output:\n" & commandOutput.output, 1)
+            let f = readFile(htmlPath)
+            writeFile(htmlPath, "<script>\n" & f & "\n</script>")
 
 proc createParentFile(accessToken, projectType, projectTitle: string): string =
     let

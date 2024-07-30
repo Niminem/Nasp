@@ -87,3 +87,5 @@ You're now ready to
 
 TODO:
 - add documentation for setting up GCP project. Nasp has to have certain APIs enabled for default scopes, such as google drive and google script APIs (I think that's it actually... need to test). Test with new GCP project, and learn the setup, then make unlisted YouTube video for demonstration.
+- add documentation for 'excluded' nim files (if i haven't already)
+- add documentation for generating HTML from Nim files (for nim-produced javascript encased in script tags for use in HTML templates). name file: file_name_html.nim (notice how _html.nim is the end of the filename)
