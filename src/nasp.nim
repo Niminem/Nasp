@@ -280,20 +280,20 @@ proc handlePushCommand() =
             fileSource = readFile(projectDir / file)
         if fileExt == ".js":
             requestBody["files"].add(%*{
-                "name": fileParts.dir / fileName,
+                "name": replace(fileParts.dir / fileName, "\\","/"),
                 "type": "SERVER_JS",
                 "source": fileSource
             })
         elif fileExt == ".html":
             requestBody["files"].add(%*{
-                "name": fileParts.dir / fileName,
+                "name": replace(fileParts.dir / fileName, "\\","/")),
                 "type": "HTML",
                 "source": fileSource
             })
         elif fileExt == ".json":
             if fileName != "appsscript": continue
             requestBody["files"].add(%*{
-                "name": fileName,
+                "name": replace(fileName, "\\","/"),
                 "type": "JSON",
                 "source": fileSource
             })
