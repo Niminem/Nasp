@@ -286,7 +286,7 @@ proc handlePushCommand() =
             })
         elif fileExt == ".html":
             requestBody["files"].add(%*{
-                "name": replace(fileParts.dir / fileName, "\\","/")),
+                "name": replace(fileParts.dir / fileName, "\\","/"),
                 "type": "HTML",
                 "source": fileSource
             })
