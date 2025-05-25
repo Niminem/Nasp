@@ -124,7 +124,7 @@ proc buildFromNimFiles(projectDir: string) =
         else: # build html file from nim file (for use as template in Apps Script HtmlService)
             let
                 htmlPath = fullPath.replace("_html.nim", ".html")
-                command = "nim js -d:release -d:danger --jsbigint64:off --out:" &
+                command = "nim js -d:release -d:danger --jsbigint64:off -d:nimStringHash2 --out:" &
                         htmlPath & " " & fullPath
                 commandOutput = execCmdEx(command)
             if commandOutput.exitCode != 0:
