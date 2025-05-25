@@ -115,7 +115,7 @@ proc buildFromNimFiles(projectDir: string) =
 
         if "_html.nim" notin fullPath: # build js file from nim file
             let
-                command = "nim js -d:release -d:danger --jsbigint64:off --out:" &
+                command = "nim js -d:release -d:danger --jsbigint64:off -d:nimStringHash2 --out:" &
                         fullPath.replace(".nim", ".js") & " " & fullPath
                 commandOutput = execCmdEx(command)
             if commandOutput.exitCode != 0:
