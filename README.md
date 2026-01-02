@@ -2,7 +2,7 @@
 
 > Develop [Apps Script](https://developers.google.com/apps-script/) projects locally using Nasp (Nim Apps Script Projects).
 
-Nasp is an API wrapper and CLI tool for developing Apps Script projects on your local machine using the Nim programming language.
+Nasp is a CLI tool for developing Apps Script projects on your local machine using the Nim programming language.
 
 
 <!-- :) -->
