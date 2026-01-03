@@ -1,91 +1,130 @@
-# Nasp
+# nasp
 
-> Develop [Apps Script](https://developers.google.com/apps-script/) projects locally using Nasp (Nim Apps Script Projects).
-
-Nasp is a CLI tool for developing Apps Script projects on your local machine using the Nim programming language.
-
-
-<!-- :) -->
-
-Nasp is inspired by [Clasp](https://github.com/google/clasp), its JavaScript cousin.
-
-----------------------
-
-## Features
-**Develop Locally**: `nasp` allows you to develop your Apps Script projects locally. Leverage source control, collaborate with other developers, and use your favorite tools to develop Apps Script.
-
-**Structure Code**: `nasp` automatically converts your flat project on script.google.com into folders on your machine. For example:
-
-- On script.google.com:
-  - tests/slides.gs
-  - tests/sheets.gs
-- locally:
-  - tests/
-    - slides.js
-    - sheets.js
-
-The reverse is true as well. `nasp` will consider your file struture and flatten it for script.google.com.
-
-**Write Apps Script in Nim / JavaScript / Both**: Write your Apps Script projects using Nim, good ol'-fashioned JavaScript, or both. Why would we even want to use Nim for this? For me:
-
-- Single-file JavaScript from Nim's `js` backend. Helps with obfuscation. Apps Scripts share the same global space anyway, so effectively the same thing.
-- `{.exportc.}` pragma can be given strings, like `{.exportc:"laksdglasdvaneg".}` and further improves obfuscation.
-- Indentation > curly braces (readability)
-- Code generation and code deduplication via compile-time `macros`
-- Type safety
-- Because it's cool (most important reason)
-
-
-**Automated Builds**: When you 'push' your local project files to script.google.com, `nasp` will walk through your project folder recursively and compile all *included* Nim modules. You can *exclude* a Nim module by placing `# exclude` on the first line.
-
-**Run Apps Script remotely**: Execute your Apps Script's functions remotely from the command line.
-
-**Ease of Development**: Open your Apps Script editor, execution logs, or Google Cloud Project dashboard with a simple command.
-
-
-----------------------
+CLI tool for Google Apps Script projects.
 
 ## Installation
 
-1. Install from nimble: `nimble install nasp` or clone via git: `git clone https://github.com/Niminem/Nasp`
+1. Install from nimble: `nimble install nasp` (when published) / `nimble install https://github.com/Niminem/Nasp.git` or clone via git: `git clone https://github.com/Niminem/Nasp`
 2. Enable the Google Apps Script API: https://script.google.com/home/usersettings
 3. Setup Google Cloud Project (GCP):
+   - Create a new Google Cloud Project
+   - Enable the Apps Script API and Drive API
+   - Create OAuth credentials (Desktop app)
+   - Download `client_secret.json`
+   - TODO: **FINISH ME**
+4. TODO: **FINISH ME**
 
-- Create new Google Cloud Project
-- Add/Enable Apps Script API, and Drive API
-- Create credentials (desktop)
+## Commands
 
-### Get started
-1. Create a new project folder
-2. Download client_secret_stuff.json file from GCP, placing it into the root of your project folder
-3. Create a new folder for your apps script and nim files (optional, defaults to root)
-4. run `nasp init --creds:"path-to-client-secret.json`, and include other necessary flags (refer below)
+### login
 
-You're now ready to 
+Authenticate with Google OAuth2 and create/update a profile. Must be run before using other commands.
 
-----------------------
+```bash
+nasp login --creds:"path/to/client_secret.json"
+nasp login --creds:"path/to/client_secret.json" --profile:myprofile
+nasp login --profile:existing_profile   # re-authenticate existing profile
+```
 
-## Usage
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `--creds` | Yes (new profiles) | — | Path to `client_secret.json` from GCP |
+| `--profile` | No | `default` | Profile name to create or update |
+| `--scope` | No | — | Additional OAuth scopes (repeatable, comma-separated) |
+| `--port` | No | `38462` | Port for OAuth callback server |
 
-----------------------
+---
 
-## CLI
+### logout
 
-### Commands
+Delete profile credentials.
 
-- [`a command that is also a link`](#)
+```bash
+nasp logout                      # logout default profile
+nasp logout --profile:myprofile  # logout specific profile
+nasp logout --all                # logout all profiles
+```
 
-----------------------
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `--profile` | No | default profile | Profile to logout |
+| `--all` | No | — | Logout all profiles |
 
-### Reference
+---
 
-----------------------
+### config
 
-<!-- 1. nimble install nasp
-2. enable the Google Apps Script API: https://script.google.com/home/usersettings -->
+View and manage configuration.
 
+Note: setting a default profile lets you use commands without passing `--profile` every time.
 
-TODO:
-- add documentation for setting up GCP project. Nasp has to have certain APIs enabled for default scopes, such as google drive and google script APIs (I think that's it actually... need to test). Test with new GCP project, and learn the setup, then make unlisted YouTube video for demonstration.
-- add documentation for 'excluded' nim files (if i haven't already)
-- add documentation for generating HTML from Nim files (for nim-produced javascript encased in script tags for use in HTML templates). name file: file_name_html.nim (notice how _html.nim is the end of the filename)
+```bash
+nasp config                      # show current config
+nasp config --list               # list all profiles
+nasp config --info               # show default profile details
+nasp config --info:myprofile     # show specific profile details
+nasp config --default:myprofile  # set default profile
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `--list` | No | — | List all profiles |
+| `--info` | No | default profile | Show profile details |
+| `--default` | No | — | Set default profile |
+
+---
+
+### create
+
+Create a new Apps Script project. Creates a `nasp.json` config file in the project directory.
+
+```bash
+nasp create                              # standalone project, uses directory name as title
+nasp create --title:"My Project"         # standalone with custom title
+nasp create --type:sheets                # container-bound to a new Google Sheet
+nasp create --parentId:abc123            # bind to existing document
+nasp create --rootDir:./myproject        # create in specific directory
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `--type` | No | `standalone` | Project type (see below) |
+| `--title` | No | directory name | Project title |
+| `--rootDir` | No | current directory | Directory to store project files |
+| `--parentId` | No | — | Bind to existing document (overrides --type) |
+| `--profile` | No | default profile | Profile to use for authentication |
+
+**Container types for `--type`:**
+
+| Type | Description |
+|------|-------------|
+| `standalone` | Standalone script (not bound to any document) |
+| `docs` | Container-bound to a new Google Doc |
+| `sheets` | Container-bound to a new Google Sheet |
+| `slides` | Container-bound to a new Google Slides presentation |
+| `forms` | Container-bound to a new Google Form |
+
+---
+
+### open
+
+Open Apps Script and GCP URLs in the browser. Must be run from a directory with `nasp.json`.
+
+```bash
+nasp open              # opens Apps Script editor (default)
+nasp open --editor     # opens Apps Script editor
+nasp open --logs       # opens script executions/logs
+nasp open --apis       # opens GCP APIs dashboard
+nasp open --creds      # opens GCP credentials page
+nasp open --container  # opens container doc/sheet/etc (if container-bound)
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| *(none)* | — | — | Opens Apps Script editor (same as `--editor`) |
+| `--editor` | No | — | Open Apps Script editor |
+| `--logs` | No | — | Open script executions/logs |
+| `--apis` | No | — | Open GCP APIs dashboard |
+| `--creds` | No | — | Open GCP credentials page |
+| `--container` | No | — | Open container document (sheets, docs, slides, forms) |
+

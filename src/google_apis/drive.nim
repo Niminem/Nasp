@@ -7,6 +7,29 @@ const
     BaseUrlMetadata = "https://www.googleapis.com/drive/v3/files"
     BaseUrlUpload = "https://www.googleapis.com/upload/drive/v3/files"
 
+proc getDriveFile*(fileId, accessToken: string;
+                   queryParams: seq[(string, string)] = @[]): Response =
+    ## REST Resource: v3.files
+    ## https://developers.google.com/drive/api/reference/rest/v3/files
+    ## Method: files.get
+    ## GET https://www.googleapis.com/drive/v3/files/{fileId}
+    ## URL: https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get
+    ## Gets a file's metadata by ID.
+    ## 
+    ## Parameters:
+    ##   - fileId: The ID of the file to get (required)
+    ##   - accessToken: OAuth2 access token for authentication
+    ##   - queryParams: Sequence of (key, value) tuples for query parameters
+    let client = newHttpClient()
+    var url = BaseUrlMetadata & "/" & fileId
+    if queryParams.len > 0:
+        var queryParts: seq[string] = @[]
+        for (key, value) in queryParams:
+            queryParts.add(key & "=" & value)
+        url &= "?" & queryParts.join("&")
+    result = client.bearerRequest(url, accessToken, HttpGet)
+    client.close()
+
 proc createDriveFile*(accessToken, body: string;
                       queryParams: seq[(string, string)] = @[];
                       isMediaUpload: bool = false): Response =
@@ -24,9 +47,7 @@ proc createDriveFile*(accessToken, body: string;
     ##   - isMediaUpload: If true, uses the upload endpoint for media uploads.
     ##                    If false, uses the standard endpoint for metadata-only requests.
     ## 
-    ## NOTE: For media uploads, you typically need to include `uploadType` in queryParams
-    ##       (e.g., "media", "multipart", or "resumable").
-    ##       For metadata-only requests, the standard endpoint is used.
+
 
     let client = newHttpClient()
     # Select base URL based on upload type
@@ -43,10 +64,7 @@ proc createDriveFile*(accessToken, body: string;
              body= body)
     client.close()
 
-proc deleteDriveFile*(
-    fileId, accessToken: string;
-    supportsAllDrives: bool = true
-): Response =
+proc deleteDriveFile*(fileId, accessToken: string; supportsAllDrives: bool = true): Response =
     ## REST Resource: v3.files
     ## https://developers.google.com/drive/api/reference/rest/v3/files
     ## Method: files.delete

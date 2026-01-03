@@ -5,6 +5,18 @@ import pkg/oauth2 # https://github.com/Niminem/OAuth2
 
 const BaseUrl = "https://script.googleapis.com"
 
+proc getProject*(scriptId, accessToken: string): Response =
+    ## REST Resource: v1.projects
+    ## https://developers.google.com/apps-script/api/reference/rest/v1/projects
+    ## Method: get
+    ## GET /v1/projects/{scriptId}
+    ## URL: https://developers.google.com/apps-script/api/reference/rest/v1/projects/get
+    ## Gets a script project's metadata (scriptId, title, parentId, etc).
+    let client = newHttpClient()
+    let url = BaseUrl & "/v1/projects/" & scriptId
+    result = client.bearerRequest(url, accessToken, HttpGet)
+    client.close()
+
 proc createProject*(accessToken, body: string): Response =
     ## REST Resource: v1.projects
     ## https://developers.google.com/apps-script/api/reference/rest/v1/projects

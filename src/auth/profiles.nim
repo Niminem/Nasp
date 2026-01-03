@@ -1,7 +1,8 @@
 ## Profile management and secure credential storage for nasp
 ## Handles ~/.nasp/ directory structure and file permissions
 
-import std/[os, json, times, strutils]
+import std/[os, json, times, httpclient]
+import pkg/oauth2
 
 type
     ProfileCredentials* = object
@@ -20,6 +21,7 @@ const
     ConfigFileName = "config.json"
     CredentialsFileName = "rc.json"
     DefaultProfileName* = "default"
+    GoogleTokenUri* = "https://oauth2.googleapis.com/token"
 
 # =============================================================================
 # Directory and Path Helpers
@@ -130,13 +132,14 @@ proc saveProfileCredentials*(profile: string, creds: ProfileCredentials) =
     # Ensure directory structure exists
     createDir(profileDir)
     
+    # Use snake_case keys to be compatible with OAuth2 library's token utils
     let data = %*{
-        "clientId": creds.clientId,
-        "clientSecret": creds.clientSecret,
-        "projectId": creds.projectId,
-        "accessToken": creds.accessToken,
-        "refreshToken": creds.refreshToken,
-        "expiresIn": creds.expiresIn,
+        "client_id": creds.clientId,
+        "client_secret": creds.clientSecret,
+        "project_id": creds.projectId,
+        "access_token": creds.accessToken,
+        "refresh_token": creds.refreshToken,
+        "expires_in": creds.expiresIn,
         "timestamp": creds.timestamp,
         "scopes": creds.scopes
     }
@@ -153,16 +156,14 @@ proc loadProfileCredentials*(profile: string): ProfileCredentials =
     
     let data = parseFile(credPath)
     
-    result.clientId = data["clientId"].getStr()
-    result.clientSecret = data["clientSecret"].getStr()
-    result.projectId = data["projectId"].getStr()
-    result.accessToken = data["accessToken"].getStr()
-    result.refreshToken = data["refreshToken"].getStr()
-    result.expiresIn = data["expiresIn"].getInt()
-    result.timestamp = data["timestamp"].getStr()
-    result.scopes = @[]
-    for scope in data["scopes"]:
-        result.scopes.add(scope.getStr())
+    result.clientId = data["client_id"].to(string)
+    result.clientSecret = data["client_secret"].to(string)
+    result.projectId = data["project_id"].to(string)
+    result.accessToken = data["access_token"].to(string)
+    result.refreshToken = data["refresh_token"].to(string)
+    result.expiresIn = data["expires_in"].to(int)
+    result.timestamp = data["timestamp"].to(string)
+    result.scopes = data["scopes"].to(seq[string])
 
 proc updateProfileTokens*(profile: string, accessToken: string, expiresIn: int, 
                           refreshToken: string = "") =
@@ -174,6 +175,61 @@ proc updateProfileTokens*(profile: string, accessToken: string, expiresIn: int,
     if refreshToken != "":
         creds.refreshToken = refreshToken
     saveProfileCredentials(profile, creds)
+
+# =============================================================================
+# Token Management (uses OAuth2 library utilities)
+# =============================================================================
+
+proc getValidAccessToken*(profile: string): string =
+    ## Gets a valid access token for the profile, refreshing if needed.
+    ## Uses OAuth2 library's loadTokens, isTokenExpired, and refreshToken.
+    ## Raises an error if refresh fails (user should re-login).
+    let credPath = getProfileCredentialsPath(profile)
+    
+    if not fileExists(credPath):
+        raise newException(IOError, "Profile '" & profile & "' does not exist. Run 'nasp login' first.")
+    
+    # Use OAuth2's loadTokens to get token info
+    let tokenInfo = loadTokens(credPath)
+    
+    # Use OAuth2's isTokenExpired to check if refresh is needed
+    if isTokenExpired(tokenInfo):
+        echo "Access token expired. Refreshing..."
+        
+        # Load full credentials for clientId/clientSecret
+        let creds = loadProfileCredentials(profile)
+        
+        let client = newHttpClient()
+        defer: client.close()
+        
+        # Use OAuth2's refreshToken to get new tokens (include scopes for consistency)
+        let response = client.refreshToken(
+            GoogleTokenUri,
+            creds.clientId,
+            creds.clientSecret,
+            creds.refreshToken,
+            creds.scopes
+        )
+        
+        if response.code == Http200:
+            let tokenData = parseJson(response.body)
+            let newAccessToken = tokenData["access_token"].to(string)
+            let newExpiresIn = tokenData["expires_in"].to(int)
+            let newRefreshToken = if tokenData.hasKey("refresh_token"): 
+                tokenData["refresh_token"].to(string) 
+                else: ""
+            
+            # Use OAuth2's updateTokens to save new tokens
+            updateTokens(credPath, newAccessToken, newExpiresIn, newRefreshToken)
+            echo "Access token refreshed."
+            return newAccessToken
+        else:
+            raise newException(IOError, 
+                "Token refresh failed. Please run 'nasp login" & 
+                (if profile != DefaultProfileName: " --profile:" & profile else: "") & 
+                "' to re-authenticate.")
+    else:
+        return tokenInfo.accessToken
 
 # =============================================================================
 # Profile Deletion

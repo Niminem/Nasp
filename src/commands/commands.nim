@@ -1,5 +1,4 @@
 ## Commands module - exports all command handlers
 
-import login, logout
-export login, logout
-
+import login, logout, config, create, open
+export login, logout, config, create, open
