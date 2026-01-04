@@ -54,7 +54,7 @@ proc handleCreate*(params: StringTableRef) =
                       params["rootDir"].absolutePath() 
                   else: 
                       getCurrentDir()
-    
+
     # Create directory if it doesn't exist
     if not dirExists(rootDir):
         createDir(rootDir)

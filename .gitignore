@@ -3,3 +3,5 @@
 *.json
 .cursorrules
 .cursor
+nimble.develop
+nimble.paths

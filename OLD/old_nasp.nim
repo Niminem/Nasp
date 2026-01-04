@@ -224,6 +224,7 @@ proc handlePullOrCloneCommand(parameters: var Table[string, string], cmd: Comman
     # allowed flags:
     # --scriptId: string (required if cmd == clone, optional otherwise)
     # --versionNumber: int (optional)
+    # NOTE: for versionNumber, this is for cloning only. The version number is of the project to retrieve. If not provided, the project's HEAD version is returned.
     # validate parameters
     if cmd == clone:
         if not parameters.hasKey("scriptId"): quit("No scriptId flag provided", 1)
