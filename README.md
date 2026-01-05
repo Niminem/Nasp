@@ -2,7 +2,7 @@
 
 > Develop [Apps Script](https://developers.google.com/apps-script/) projects locally using **Nasp** (Nim Apps Script Projects).
 
-Nasp is a CLI tool for developing Apps Script projects on your local machine. Inspired by [Clasp](https://github.com/google/clasp), its JavaScript cousin.
+Nasp is a CLI tool for developing Apps Script projects on your local machine using the Nim programming language. Inspired by [Clasp](https://github.com/google/clasp), its JavaScript cousin.
 
 ---
 
