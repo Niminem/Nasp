@@ -9,4 +9,4 @@ bin           = @["nasp"]
 
 # Dependencies
 requires "nim >= 2.0.0"
-requires "https://github.com/Niminem/OAuth2.git" # TODO: replace with nimble package when published
+requires "oauth2 >= 0.1.0"
