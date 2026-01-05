@@ -1,171 +1,18 @@
 # nasp
 
-CLI tool for Google Apps Script projects.
+> Develop [Apps Script](https://developers.google.com/apps-script/) projects locally using **Nasp** (Nim Apps Script Projects).
 
-## Installation
-
-1. Install from nimble: `nimble install nasp` (when published) / `nimble install https://github.com/Niminem/Nasp.git` or clone via git: `git clone https://github.com/Niminem/Nasp`
-2. Enable the Google Apps Script API: https://script.google.com/home/usersettings
-3. Setup Google Cloud Project (GCP):
-   - Create a new Google Cloud Project
-   - Enable the Apps Script API and Drive API (and I believe the Service API TODO: revisit)
-   - Create OAuth credentials (Desktop app)
-   - Download `client_secret.json`
-   - TODO: **FINISH ME**
-4. TODO: **FINISH ME** (note: need to list scopes that nasp will need, refer to the req_scopes.nim file)
-
-## Commands
-
-### login
-
-Authenticate with Google OAuth2 and create/update a profile. Must be run before using other commands. Opens a browser for Google authorization.
-
-```bash
-nasp login --creds:"path/to/client_secret.json"
-nasp login --creds:"path/to/client_secret.json" --profile:myprofile
-nasp login --profile:existing_profile   # re-authenticate existing profile
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--creds` | Yes (new profiles) | — | Path to `client_secret.json` from GCP |
-| `--profile` | No | `default` | Profile name to create or update |
-| `--scope` | No | — | Additional OAuth scopes (comma-separated, can be repeated) |
-| `--port` | No | `38462` | Port for OAuth callback server |
-
-**Notes:**
-- Required scopes for Apps Script, Drive, and Cloud Platform are automatically included
-- The `--scope` flag adds additional scopes on top of the required ones
-- The first profile created becomes the default profile
-- Existing profiles can re-authenticate without `--creds` (uses stored client credentials)
-- If the port is in use, wait a few seconds or specify a different port with `--port`
+Nasp is a CLI tool for developing Apps Script projects on your local machine. Inspired by [Clasp](https://github.com/google/clasp), its JavaScript cousin.
 
 ---
 
-### logout
+## Features
 
-Delete profile credentials from `~/.nasp/profiles/`.
+**Develop Locally**  
+Write and manage your Apps Script projects on your machine. Use source control, collaborate with other developers, and leverage your favorite editor and tools.
 
-```bash
-nasp logout                      # logout default profile
-nasp logout --profile:myprofile  # logout specific profile
-nasp logout --all                # logout all profiles
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--profile` | No | current default | Profile to logout |
-| `--all` | No | — | Logout all profiles |
-
-**Notes:**
-- Deletes the profile directory and all stored credentials
-- If the deleted profile was the default, another remaining profile becomes the new default
-- After deletion, shows remaining profiles and the current default
-
----
-
-### config
-
-View and manage configuration.
-
-```bash
-nasp config                      # show current config
-nasp config --list               # list all profiles
-nasp config --info               # show default profile details
-nasp config --info:myprofile     # show specific profile details
-nasp config --default:myprofile  # set default profile
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| *(none)* | — | — | Show current config (default profile, config paths, profile count) |
-| `--list` | No | — | List all profiles (default marked with `*`) |
-| `--info` | No | current default | Show detailed profile info |
-| `--default` | No | — | Set default profile |
-
-**Profile info (`--info`) displays:**
-- Profile name and whether it's the default
-- GCP Project ID and Client ID (truncated)
-- OAuth scopes granted to the profile
-- Token status: valid (with time remaining) or expired (tokens will automatically refresh as needed)
-
-**Note:** Setting a default profile lets you use commands without passing `--profile` every time for a specific profile you want, all commands default to the default profile.
-
----
-
-### create
-
-Create a new Apps Script project. Creates a `nasp.json` config file in the project directory.
-
-```bash
-nasp create                              # standalone project, uses directory name as title
-nasp create --title:"My Project"         # standalone with custom title
-nasp create --type:sheets                # container-bound to a new Google Sheet
-nasp create --parentId:abc123            # bind to existing document
-nasp create --rootDir:./myproject        # create in specific directory
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--type` | No | `standalone` | Project type (see below) |
-| `--title` | No | directory name | Project title |
-| `--rootDir` | No | current directory | Directory to store project files (created if doesn't exist) |
-| `--parentId` | No | — | Bind to existing document (overrides `--type`) |
-| `--profile` | No | current default | Profile to use for authentication |
-
-**Project types for `--type`:**
-
-| Type | Description |
-|------|-------------|
-| `standalone` | Standalone script (not bound to any document) |
-| `docs` | Container-bound to a new Google Doc |
-| `sheets` | Container-bound to a new Google Sheet |
-| `slides` | Container-bound to a new Google Slides presentation |
-| `forms` | Container-bound to a new Google Form |
-
-**Notes:**
-- For `docs`, `sheets`, `slides`, `forms`: creates the container document first, then binds the script to it
-- Using `--parentId` binds to an existing document instead of creating a new one
-- Fails if `nasp.json` already exists in the target directory
-- Automatically pulls project files after creation (to get `appsscript.json` manifest)
-
-**nasp.json contents:**
-| Field | Description |
-|-------|-------------|
-| `scriptId` | The Apps Script project ID |
-| `title` | Project title |
-| `type` | Project type: `standalone`, `docs`, `sheets`, `slides`, `forms`, or `containerbound` |
-| `projectId` | GCP project ID from the profile |
-| `rootDir` | Directory path for project files |
-| `parentId` | Container document ID (only if container-bound) |
-
----
-
-### clone
-
-Clone an existing Apps Script project by its script ID. Downloads all project files and creates a `nasp.json` config file.
-
-```bash
-nasp clone --scriptId:abc123xyz           # clone to current directory
-nasp clone --scriptId:abc123xyz --rootDir:./myproject   # clone to specific directory
-nasp clone --scriptId:abc123xyz --versionNumber:5       # clone a specific version
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--scriptId` | Yes | — | The Apps Script project ID to clone |
-| `--versionNumber` | No | HEAD | Specific version to clone (if not provided, project's HEAD version is returned per Apps Script API) |
-| `--rootDir` | No | current directory | Directory to store project files |
-| `--profile` | No | current default | Profile to use for authentication |
-
-**Finding the Script ID:**
-- Open your Apps Script project in the browser
-- Go to Project Settings (gear icon)
-- Copy the "Script ID" value
-
-**File Structure:**
-
-Files are saved with their full name as stored in Apps Script. If your project uses folder-like naming on script.google.com, nasp will create matching local directories:
+**Structure Your Code**  
+Nasp automatically handles folder structure conversion between your local filesystem and script.google.com:
 
 | On script.google.com | Locally |
 |----------------------|---------|
@@ -173,157 +20,280 @@ Files are saved with their full name as stored in Apps Script. If your project u
 | `tests/sheets` | `tests/sheets.js` |
 | `utils/helpers` | `utils/helpers.js` |
 
-**Notes:**
-- Fails if `nasp.json` already exists in the target directory
-- The `nasp.json` created has the same structure as create, but `type` will be `standalone` or `containerbound` (the specific container type like docs/sheets cannot be determined from the API)
+When you `push`, nasp flattens your folder structure for Apps Script. When you `pull` or `clone`, it recreates directories based on file names containing `/`.
+
+**Write in Nim, JavaScript, or Both**  
+Use JavaScript for straightforward scripts, or write in Nim and let nasp compile to JavaScript automatically. Why Nim? For me:
+
+- Single-file JavaScript output from Nim's `js` backend (Apps Scripts share the same global space anyway)
+- `{.exportc.}` pragma for obfuscation (e.g., `{.exportc:"uweroiewt8wweh9w8th".}`)
+- Indention > Braces
+- Compile-time macros for code generation and deduplication
+- Type safety
+- Because it's cool (the most important reason)
+
+**Automated Builds**  
+When you `push`, nasp walks through your project and compiles all `.nim` files to JavaScript. Use `# exclude` on the first line of the nim file to skip compilation. Files named `*_html.nim` become HTML files with embedded `<script>` tags.
+
+**Run Scripts Remotely**  
+Execute your Apps Script functions directly from the command line with `nasp run`.
+
+**Quick Access**  
+Open the Apps Script editor, execution logs, or Google Cloud Project dashboard with `nasp open`.
 
 ---
 
-### pull
+## How It Works
 
-Pull the latest changes from a remote Apps Script project. Must be run from a directory with `nasp.json`.
+Nasp manages Apps Script projects through a `nasp.json` config file that links your local directory to a remote Apps Script project.
 
-```bash
-nasp pull                        # pull latest (HEAD) version
-nasp pull --versionNumber:3      # pull a specific version
+### Workflow Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Google Cloud                                 │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Google Cloud Project (GCP)                                   │   │
+│  │  • OAuth credentials (client_secret.json)                     │   │
+│  │  • Apps Script API enabled                                    │   │
+│  │  • Drive API enabled                                          │   │
+│  │  • Service Usage API enabled                                  │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Apps Script Project                                          │   │
+│  │  • scriptId identifies the project                            │   │
+│  │  • Code files (.js → SERVER_JS, .html → HTML)                 │   │
+│  │  • Manifest (appsscript.json)                                 │   │
+│  │  • Optional: bound to Docs/Sheets/Slides/Forms                │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+                               ▲
+                               │  nasp push / pull / clone / run
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Local Machine                                │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  ~/.nasp/profiles/                                            │   │
+│  │  • Profile configs (credentials, tokens, scopes)              │   │
+│  │  • Multiple profiles supported                                │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Project Directory                                            │   │
+│  │  • nasp.json (project config)                                 │   │
+│  │  • appsscript.json (Apps Script manifest)                     │   │
+│  │  • *.js, *.html, *.nim files                                  │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--versionNumber` | No | HEAD | Specific version to pull (if not provided, project's HEAD version is returned per Apps Script API) |
-| `--profile` | No | current default | Profile to use for authentication |
+### Typical Development Flow
 
-**Notes:**
-- Requires `nasp.json` to exist in the current directory (run `clone` first)
-- Uses `rootDir` from `nasp.json` to determine where to write files
-- Overwrites existing local files with remote content
-- Does NOT update `nasp.json` (preserves original config)
-- Does NOT delete local files that were removed from the remote project
-- Does NOT track or merge changes — simply replaces file contents
-- This is simpler than `git pull`; consider using version control separately for your local files
+1. **Setup (once)**
+   - Create a Google Cloud Project
+   - Enable Apps Script API, Drive API, and Service Usage API
+   - Create OAuth credentials and download `client_secret.json`
+   - Run `nasp login --creds:client_secret.json`
+
+2. **Start a Project**
+   - `nasp create` — Create a new Apps Script project
+   - *or* `nasp clone --scriptId:...` — Clone an existing project
+
+3. **Develop**
+   - Edit `.js`, `.html`, or `.nim` files locally
+   - `nasp push` — Upload changes (compiles Nim automatically)
+   - `nasp pull` — Download remote changes
+   - `nasp open` — Open editor/logs in browser
+
+4. **Execute**
+   - `nasp run --func:myFunction` — Run functions remotely
 
 ---
 
-### push
+## Installation
 
-Push local project files to the remote Apps Script project. Must be run from a directory with `nasp.json`.
+### Install nasp
 
 ```bash
-nasp push                # compile Nim files and push all files
-nasp push --skipBuild    # push without compiling Nim files
+# From nimble (when published)
+nimble install nasp
+
+# Or from GitHub
+nimble install https://github.com/Niminem/Nasp.git
+
+# Or clone and build
+git clone https://github.com/Niminem/Nasp
+cd Nasp
+nimble build
 ```
 
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--skipBuild` | No | — | Skip Nim compilation step |
-| `--profile` | No | current default | Profile to use for authentication |
+### Setup Google Cloud Project
 
-**Supported file types:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or use an existing one)
+3. Enable the following APIs:
+   - [Apps Script API](https://console.cloud.google.com/apis/library/script.googleapis.com) — required for all nasp operations
+   - [Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com) — required to list scripts and create container-bound scripts
+   - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) — required to list/enable/disable APIs (future features)
+4. Configure OAuth consent screen:
+   - Go to **APIs & Services** > **OAuth consent screen**
+   - Select **External** (or Internal if using Google Workspace)
+   - Fill in app name, support email, and developer email
+   - Add the required scopes (see [`src/google_apis/req_scopes.nim`](src/google_apis/req_scopes.nim)):
+     - `script.deployments`, `script.projects`, `script.webapp.deploy`
+     - `drive.metadata.readonly`, `drive.file`
+     - `service.management`
+     - `userinfo.email`, `userinfo.profile`
+     - `cloud-platform`
+   - Add **Test users**: Add your Google account email(s) that will use nasp
+   - Save and continue
+5. Create OAuth credentials:
+   - Go to **APIs & Services** > **Credentials**
+   - Click **Create Credentials** > **OAuth client ID**
+   - Select **Desktop app**
+   - Download the JSON file (rename to `client_secret.json`)
+6. Enable the Apps Script API in your user settings:
+   - Go to https://script.google.com/home/usersettings
+   - Turn on **Google Apps Script API**
 
-| Extension | Apps Script Type | Description |
-|-----------|------------------|-------------|
-| `.js` | SERVER_JS | Server-side JavaScript |
-| `.html` | HTML | HTML files (for HtmlService) |
-| `appsscript.json` | JSON | Manifest file (required) |
+### Authenticate
 
-**Nim compilation:**
+```bash
+nasp login --creds:path/to/client_secret.json
+```
 
-If you have `.nim` files in your project, nasp will compile them before pushing:
+This opens a browser for Google authorization and creates your default profile.
+
+---
+
+## Quick Start
+
+### Create a New Project
+
+```bash
+mkdir my-script && cd my-script
+nasp create --title:"My Script"
+```
+
+This creates the Apps Script project, generates `nasp.json`, and pulls the manifest file.
+
+### Clone an Existing Project
+
+```bash
+mkdir my-script && cd my-script
+nasp clone --scriptId:YOUR_SCRIPT_ID
+```
+
+Find the Script ID in the Apps Script editor under **Project Settings** > **Script ID**.
+
+### Push and Pull
+
+```bash
+# Edit files locally, then push
+nasp push
+
+# Pull remote changes
+nasp pull
+```
+
+### Run a Function
+
+```bash
+# First: link Apps Script project to GCP and deploy as API Executable
+# See full prerequisites in COMMANDS.md
+nasp run --func:myFunction
+nasp run --func:addNumbers --args:"[5, 3]"
+```
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `login` | Authenticate with Google and create a profile |
+| `logout` | Delete profile credentials |
+| `config` | View/manage profiles and configuration |
+| `create` | Create a new Apps Script project |
+| `clone` | Clone an existing project by script ID |
+| `pull` | Download remote project files |
+| `push` | Upload local files (with Nim compilation) |
+| `open` | Open Apps Script/GCP URLs in browser |
+| `run` | Execute a function remotely |
+
+**[→ Full Commands Reference](src/commands/COMMANDS.md)**
+
+---
+
+## Project Files
+
+### nasp.json
+
+Created by `create` or `clone`. Links your local directory to a remote Apps Script project.
+
+```json
+{
+  "scriptId": "abc123...",
+  "title": "My Script",
+  "type": "standalone",
+  "projectId": "my-gcp-project",
+  "rootDir": "."
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `scriptId` | Apps Script project ID |
+| `title` | Project title |
+| `type` | `standalone`, `docs`, `sheets`, `slides`, `forms`, or `containerbound` |
+| `projectId` | GCP project ID from your profile |
+| `rootDir` | Directory for project files |
+| `parentId` | Container document ID (if container-bound) |
+
+### appsscript.json
+
+The Apps Script manifest file. Defines runtime version, scopes, and other project settings. Pulled from the remote project automatically.
+
+```json
+{
+  "timeZone": "America/New_York",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
+```
+
+---
+
+## Nim Integration
+
+Nasp compiles Nim files to JavaScript before pushing. This is optional— you can use plain JavaScript if you prefer.
+
+### How It Works
+
 - `*.nim` → `*.js` (server-side code)
 - `*_html.nim` → `*.html` (wrapped in `<script>` tags for HtmlService)
-- Add `# exclude` to the first line of a `.nim` file to skip compilation
-- Uses flags: `-d:release -d:danger --jsbigint64:off -d:nimStringHash2`
+- Add `# exclude` on the first line to skip compilation
 
-**Notes:**
-- Requires `appsscript.json` manifest file (created automatically by Apps Script)
-- Completely replaces remote project content with your local files
-- Files that exist only on the remote (not in your local project) will be removed
-- Preserves folder structure (e.g., `utils/helpers.js` → `utils/helpers` on Apps Script)
-- This is simpler than `git push`; there is no merge, just full replacement
+### Example
+
+```nim
+# hello.nim
+proc greet(name: string): string {.exportc.} =
+  result = "Hello, " & name & "!"
+```
+
+After `nasp push`, this becomes `hello.js` on Apps Script with an exported `greet` function.
 
 ---
 
-### open
+## Tips
 
-Open Apps Script and GCP URLs in the browser. Must be run from a directory with `nasp.json`.
-
-```bash
-nasp open              # opens Apps Script editor (default)
-nasp open --editor     # opens Apps Script editor
-nasp open --logs       # opens script executions/logs
-nasp open --gcp        # opens GCP project page (find Project Number here)
-nasp open --apis       # opens GCP APIs dashboard
-nasp open --creds      # opens GCP credentials page
-nasp open --container  # opens container doc/sheet/etc (if container-bound)
-nasp open --editor --logs  # open multiple URLs at once
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| *(none)* | — | — | Opens Apps Script editor (same as `--editor`) |
-| `--editor` | No | — | Open Apps Script editor |
-| `--logs` | No | — | Open script executions/logs |
-| `--gcp` | No | — | Open GCP project page (shows Project Number, needed for remote apps script execution) |
-| `--apis` | No | — | Open GCP APIs dashboard |
-| `--creds` | No | — | Open GCP credentials page |
-| `--container` | No | — | Open container document (sheets, docs, slides, forms) |
-
-**Notes:**
-- Multiple flags can be combined to open several URLs at once
-- `--container` only works for projects created with nasp (where the specific container type is known)
-- `--container` won't work for cloned container-bound projects (the API doesn't provide the container type). To fix this, manually edit `nasp.json` and change `"type": "containerbound"` to the specific type (`docs`, `sheets`, `slides`, or `forms`)
-
----
-
-### run
-
-Execute an Apps Script function remotely. Must be run from a directory with `nasp.json`.
-
-```bash
-nasp run --func:myFunction                           # run function with no arguments
-nasp run --func:myFunction --args:"['arg1', 123]"     # run with arguments
-nasp run --func:myFunction --deployed                # run deployed version
-```
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--func` | Yes | — | Name of the function to execute |
-| `--args` | No | — | JSON array of arguments (use single quotes for strings: `"['string', 123, true]"`) |
-| `--deployed` | No | — | Run the most recent versioned deployment instead of dev mode |
-| `--profile` | No | current default | Profile to use for authentication |
-
-**Execution modes:**
-
-| Mode | Description |
-|------|-------------|
-| Development (default) | Runs the most recently saved version of the script (HEAD) |
-| Deployed (`--deployed`) | Runs the most recent versioned API Executable deployment |
-
-**Prerequisites:**
-
-Before using `nasp run`, you must configure your Apps Script project:
-
-1. **Add to `appsscript.json`:**
-   ```json
-   {
-     "executionApi": {
-       "access": "ANYONE"
-     }
-   }
-   ```
-
-2. **Deploy as API Executable:**
-   - Open the project (`nasp open`)
-   - Click **Deploy** > **New deployment**
-   - Select type: **API Executable**
-   - Click **Deploy**
-
-3. **Ensure scopes are listed** in `appsscript.json` for any APIs your function uses
-
-**Notes:**
-- Functions must be public (not nested or private)
-- Arguments are passed as a JSON array; each element is one parameter
-- Use single quotes for strings in `--args` (e.g., `"['hello', 'world']"`) — they're auto-converted to double quotes for JSON
-- On success, the function's return value is displayed
-- On error, detailed error information from Apps Script is shown
-
+- **Use version control**: Nasp's `push`/`pull` are simple overwrites. Use Git for proper change tracking.
+- **Multiple profiles**: Use `--profile:name` for different Google accounts or GCP projects.
+- **Open shortcuts**: `nasp open --logs` for execution logs, `nasp open --gcp` for the GCP console.
+- **Remote execution**: Link project to GCP, deploy as API Executable, then use `nasp run`. See [run command docs](src/commands/COMMANDS.md#run).
+- **Complex arguments**: Use `--argsFile:args.json` instead of `--args` for strings or complex data.

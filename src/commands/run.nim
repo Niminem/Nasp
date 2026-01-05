@@ -14,8 +14,9 @@ proc handleRun*(params: StringTableRef) =
     ## 
     ## Flags:
     ##   --func: string (required) - Name of the function to execute
-    ##   --args: string (optional) - JSON array of arguments (e.g., "['arg1', 123, true]")
-    ##                               Single quotes are converted to double quotes for shell compatibility
+    ##   --args: string (optional) - JSON array of arguments passed directly
+    ##   --argsFile: string (optional) - Path to JSON file containing arguments array
+    ##                                   (overrides --args if both provided)
     ##   --deployed: flag (optional) - Run the deployed version instead of dev version
     ##   --profile: string (optional) - Authentication profile (default: current default)
     ## 
@@ -24,6 +25,11 @@ proc handleRun*(params: StringTableRef) =
     ##   - For dev mode (default): runs the latest saved code (HEAD)
     ##   - For deployed mode (--deployed): runs the most recent versioned API Executable deployment
     ##   - Function must be accessible (not private, properly scoped)
+    ##   - --argsFile is recommended for complex arguments to avoid shell escaping issues
+    ## 
+    ## Argument passing:
+    ##   - For numbers/booleans: --args:"[5, 3, true]" (works on all shells)
+    ##   - For strings: use --argsFile to avoid shell escaping issues
     ## 
     ## Prerequisites (in Apps Script project):
     ##   - appsscript.json must include: "executionApi": { "access": "ANYONE" }
@@ -60,10 +66,21 @@ proc handleRun*(params: StringTableRef) =
     let accessToken = getValidAccessToken(profile)
     
     # Parse optional arguments
-    # Convert single quotes to double quotes for easier command-line usage
-    # JSON requires double quotes, but those are hard to escape in shells
-    var argsStr = if params.hasKey("args"): params["args"] else: ""
-    argsStr = argsStr.replace("'", "\"")
+    # --argsFile takes precedence over --args (avoids shell escaping issues)
+    var argsStr = ""
+    var argsSource = ""
+    
+    if params.hasKey("argsFile"):
+        # Read arguments from file (recommended for complex args)
+        let argsFilePath = params["argsFile"].absolutePath()
+        if not fileExists(argsFilePath):
+            quit("Arguments file not found: " & argsFilePath, QuitFailure)
+        argsStr = readFile(argsFilePath).strip()
+        argsSource = "file: " & argsFilePath
+    elif params.hasKey("args"):
+        # Use command-line args (shell escaping is user's responsibility)
+        argsStr = params["args"]
+        argsSource = "command line"
     
     # devMode: true = run most recent saved version (default)
     # devMode: false = run the deployed version
@@ -126,11 +143,11 @@ proc handleRun*(params: StringTableRef) =
             argsJson = parseJson(argsStr)
         except JsonParsingError:
             quit("Invalid --args value. Must be a valid JSON array.\n" &
-                 "Example: --args:\"['string', 123, true]\"", QuitFailure)
+                 "Example: --args:'[\"string\", 123, true]'", QuitFailure)
         
         if argsJson.kind != JArray:
             quit("--args must be a JSON array, not " & $argsJson.kind & ".\n" &
-                 "Example: --args:\"['string', 123, true]\"", QuitFailure)
+                 "Example: --args:'[\"string\", 123, true]'", QuitFailure)
         
         functionData["parameters"] = argsJson
     
@@ -142,6 +159,7 @@ proc handleRun*(params: StringTableRef) =
     echo "Function: " & funcName
     if argsStr != "":
         echo "Arguments: " & argsStr
+        echo "Arguments source: " & argsSource
     echo "Mode: " & (if devMode: "Development (latest saved)" else: "Deployed")
     echo ""
     echo "Executing function..."

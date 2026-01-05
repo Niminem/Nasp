@@ -466,12 +466,23 @@ nasp run --func:helloWorld
 nasp run --func:addNumbers --args:"[5, 3]"
 ```
 - **Expected:** Result: `8`
+- **Note:** Double quotes work on all shells for numbers/booleans
 
-**Run function with string argument:**
+**Run function with string argument (using --argsFile):**
+
+Create a file `args.json`:
+```json
+["World"]
+```
+
+Then run:
 ```bash
-nasp run --func:greetUser --args:"['World']"
+nasp run --func:greetUser --argsFile:args.json
 ```
 - **Expected:** Result: `"Hello, World!"`
+- **Note:** `--argsFile` is recommended for string arguments to avoid shell escaping issues
+
+**Note:** For string arguments, always use `--argsFile` to avoid shell escaping issues across different platforms.
 
 **Run deployed version:**
 ```bash
@@ -501,9 +512,15 @@ nasp run --func:helloWorld --args:"not json"
 
 Invalid --args (not an array):
 ```bash
-nasp run --func:helloWorld --args:"{'key': 'value'}"
+nasp run --func:helloWorld --args:"123"
 ```
 - **Expected:** Error "--args must be a JSON array"
+
+Invalid --argsFile (file not found):
+```bash
+nasp run --func:helloWorld --argsFile:nonexistent.json
+```
+- **Expected:** Error "Arguments file not found"
 
 Non-existent function:
 ```bash
@@ -656,5 +673,5 @@ nasp config --list
 | clone | `--scriptId`, `--rootDir`, `--versionNumber`, `--profile` |
 | pull | `--versionNumber`, `--profile`, HEAD |
 | push | `--skipBuild`, `--profile`, Nim compilation |
-| run | `--func`, `--args`, `--deployed`, `--profile` |
+| run | `--func`, `--args`, `--argsFile`, `--deployed`, `--profile` |
 | open | `--editor`, `--logs`, `--gcp`, `--apis`, `--creds`, `--container`, multiple |
