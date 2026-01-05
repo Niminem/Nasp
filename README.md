@@ -118,16 +118,13 @@ Nasp manages Apps Script projects through a `nasp.json` config file that links y
 ### Install nasp
 
 ```bash
-# From nimble (when published)
+# From nimble
 nimble install nasp
 
-# Or from GitHub
-nimble install https://github.com/Niminem/Nasp.git
-
-# Or clone and build
+# Or clone via git
 git clone https://github.com/Niminem/Nasp
 cd Nasp
-nimble build
+nimble install
 ```
 
 ### Setup Google Cloud Project
