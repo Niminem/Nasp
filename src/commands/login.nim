@@ -82,9 +82,23 @@ proc parseGcpCredentials(filepath: string): GcpCredentials =
 # =============================================================================
 
 proc handleLogin*(params: StringTableRef) =
-    ## Handle the login command
-    ## Required: --creds (path to client_secret.json) for NEW profiles only
-    ## Optional: --profile (defaults to "default"), --scope (repeatable), --port (defaults to 38462)
+    ## Authenticate with Google OAuth2 and create/update a profile.
+    ## 
+    ## This command opens a browser for Google authorization and stores the
+    ## resulting credentials in ~/.nasp/profiles/{profile}/rc.json.
+    ## 
+    ## Flags:
+    ##   --creds: string (required for NEW profiles) - Path to client_secret.json from GCP
+    ##   --profile: string (optional) - Profile name to create or update (default: "default")
+    ##   --scope: string (optional) - Additional OAuth scopes, comma-separated (can be repeated)
+    ##   --port: int (optional) - Port for OAuth callback server (default: 38462)
+    ## 
+    ## Behavior:
+    ##   - New profiles require --creds; existing profiles can re-authenticate without it
+    ##   - Required scopes (Apps Script, Drive, etc.) are automatically included
+    ##   - The --scope flag adds additional scopes on top of the required ones
+    ##   - The first profile created OR any profile named "default" becomes the default
+    ##   - Port availability is checked before starting the OAuth flow
     
     let profile = if params.hasKey("profile"): params["profile"] else: DefaultProfileName
     let isNewProfile = not profileExists(profile)

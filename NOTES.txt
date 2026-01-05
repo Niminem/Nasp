@@ -1,3 +1,18 @@
 after finishing and testing this library, we want to publish oauth2 library as a nimble package.
 we want to then reference the nimble package in the nimble file for nasp.
 
+
+1/4/26 todos
+
+test all commands [done]
+
+create push command [done]
+
+test push command (and pull command w/ multiple directories and stuff) [done]
+
+create run command [X]
+
+test run command [X]
+
+we'll want to strip the documentation to the readme for the commands down. for example, we don't
+need to provide so much information about the nasp.json file. i think. idk. let's think about it.

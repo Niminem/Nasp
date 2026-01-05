@@ -9,8 +9,17 @@ import ../auth/profiles
 # =============================================================================
 
 proc handleLogout*(params: StringTableRef) =
-    ## Handle the logout command
-    ## Optional: --profile (defaults to default profile), --all (logout all profiles)
+    ## Delete profile credentials from ~/.nasp/profiles/.
+    ## 
+    ## Flags:
+    ##   --profile: string (optional) - Profile to logout (default: current default profile)
+    ##   --all: flag (optional) - Delete all profiles
+    ## 
+    ## Behavior:
+    ##   - Deletes the profile directory and all stored credentials
+    ##   - If the deleted profile was the default, another profile becomes the default
+    ##   - After deletion, shows remaining profiles and the new default
+    ##   - With --all, deletes all profiles and clears the config
     
     # Check for --all flag
     if params.hasKey("all"):

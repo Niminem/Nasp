@@ -6,6 +6,7 @@ import pkg/oauth2 # https://github.com/Niminem/OAuth2
 const 
     BaseUrlMetadata = "https://www.googleapis.com/drive/v3/files"
     BaseUrlUpload = "https://www.googleapis.com/upload/drive/v3/files"
+    Timeout = 60000  # 60 seconds in milliseconds
 
 proc getDriveFile*(fileId, accessToken: string;
                    queryParams: seq[(string, string)] = @[]): Response =
@@ -20,7 +21,7 @@ proc getDriveFile*(fileId, accessToken: string;
     ##   - fileId: The ID of the file to get (required)
     ##   - accessToken: OAuth2 access token for authentication
     ##   - queryParams: Sequence of (key, value) tuples for query parameters
-    let client = newHttpClient()
+    let client = newHttpClient(timeout = Timeout)
     var url = BaseUrlMetadata & "/" & fileId
     if queryParams.len > 0:
         var queryParts: seq[string] = @[]
@@ -49,7 +50,7 @@ proc createDriveFile*(accessToken, body: string;
     ## 
 
 
-    let client = newHttpClient()
+    let client = newHttpClient(timeout = Timeout)
     # Select base URL based on upload type
     let baseUrl = if isMediaUpload: BaseUrlUpload else: BaseUrlMetadata
     # Build URL with query parameters
@@ -83,7 +84,7 @@ proc deleteDriveFile*(fileId, accessToken: string; supportsAllDrives: bool = tru
     ## 
     ## Request body: Must be empty
     ## Response: Empty JSON object if successful
-    let client = newHttpClient()
+    let client = newHttpClient(timeout = Timeout)
     
     # Build URL with fileId in path and supportsAllDrives query parameter
     var url = BaseUrlMetadata & "/" & fileId & "?supportsAllDrives=" & $supportsAllDrives

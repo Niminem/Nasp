@@ -81,11 +81,19 @@ proc showConfig() =
     echo "Total profiles: " & $allProfiles.len
 
 proc handleConfig*(params: StringTableRef) =
-    ## Handle the config command
-    ## No args: show current config
-    ## --default:profile: set default profile
-    ## --list: list all profiles
-    ## --info or --info:profile: show profile details
+    ## View and manage nasp configuration.
+    ## 
+    ## Flags:
+    ##   (no flags) - Show current config (default profile, config paths, profile count)
+    ##   --list: flag - List all profiles with the default marked
+    ##   --info: string (optional) - Show detailed profile info (default: current default profile)
+    ##   --default: string - Set the default profile
+    ## 
+    ## Profile info (--info) displays:
+    ##   - Profile name and whether it's the default
+    ##   - GCP Project ID and Client ID
+    ##   - OAuth scopes granted
+    ##   - Token status (valid with time remaining, or expired)
     
     # Set default profile
     if params.hasKey("default"):

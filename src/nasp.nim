@@ -2,7 +2,7 @@ import std/[cmdline, strtabs, strutils]
 import commands/commands
 import utils
 
-type Command = enum Login, Logout, Config, Create, Open, Clone, Pull
+type Command = enum Login, Logout, Config, Create, Open, Clone, Pull, Push, Run
 
 when isMainModule:
     var parameters = paramsToTable(commandLineParams()) # gives [key]:value for cmdline args
@@ -17,3 +17,5 @@ when isMainModule:
     of Open: handleOpen(parameters)
     of Clone: handleClone(parameters)
     of Pull: handlePull(parameters)
+    of Push: handlePush(parameters)
+    of Run: handleRun(parameters)

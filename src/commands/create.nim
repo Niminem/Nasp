@@ -4,6 +4,7 @@
 import std/[strtabs, json, httpclient, os, strutils]
 import ../auth/profiles
 import ../google_apis/[apps_script, drive]
+import ../utils
 
 # =============================================================================
 # Types
@@ -39,11 +40,34 @@ proc createParentFile(accessToken, projectType, title: string): string =
 # =============================================================================
 
 proc handleCreate*(params: StringTableRef) =
-    ## Handle the create command
-    ## Optional: --type, --title, --parentId, --rootDir, --profile
+    ## Create a new Apps Script project and save config to nasp.json.
+    ## 
+    ## Flags:
+    ##   --type: string (optional) - Project type: standalone, docs, sheets, slides, forms
+    ##                               (default: "standalone")
+    ##   --title: string (optional) - Project title (default: directory name)
+    ##   --rootDir: string (optional) - Directory for project files (default: current dir)
+    ##   --parentId: string (optional) - Bind to existing document (overrides --type)
+    ##   --profile: string (optional) - Authentication profile (default: current default)
+    ## 
+    ## Behavior:
+    ##   - Creates the rootDir directory if it doesn't exist
+    ##   - Fails if nasp.json already exists in rootDir
+    ##   - For docs/sheets/slides/forms, creates the container file first via Drive API
+    ##   - Using --parentId binds to an existing document (type becomes "containerbound")
+    ##   - Automatically pulls project files after creation (to get appsscript.json manifest)
+    ## 
+    ## Output (nasp.json):
+    ##   - scriptId: The Apps Script project ID
+    ##   - title: Project title
+    ##   - type: Project type (standalone, docs, sheets, slides, forms, or containerbound)
+    ##   - projectId: GCP project ID from the profile
+    ##   - rootDir: Directory path
+    ##   - parentId: Container document ID (only if container-bound)
     
     # Get profile
     let profile = if params.hasKey("profile"): params["profile"] else: getDefaultProfile()
+    echo "Using profile: " & profile
     
     # Load profile credentials (for projectId) and get valid access token
     let profileCreds = loadProfileCredentials(profile)
@@ -112,14 +136,35 @@ proc handleCreate*(params: StringTableRef) =
     var projectConfig = %*{
         "scriptId": scriptId,
         "title": title,
+        "type": projectType,
         "projectId": profileCreds.projectId,
         "rootDir": rootDir
     }
     if finalParentId != "":
         projectConfig["parentId"] = newJString(finalParentId)
-        projectConfig["type"] = newJString(projectType)
     
     writeFile(configPath, projectConfig.pretty(2))
+    
+    # Pull project files (to get appsscript.json manifest)
+    echo "\nPulling project files..."
+    let projectContent = getProjectContent(scriptId, accessToken)
+    if projectContent.code != Http200:
+        echo "Warning: Failed to pull project files. You may need to run 'nasp pull' manually."
+        echo "Code: " & $projectContent.code
+    else:
+        let projectContentJson = parseJson(projectContent.body)
+        var fileCount = 0
+        for file in projectContentJson["files"].getElems():
+            let
+                fileName = file["name"].getStr()
+                fileExt = fileTypeToExt(file["type"].getStr())
+                fileSource = file["source"].getStr()
+                filePath = rootDir / fileName & fileExt
+            createDirsFromFilePath(filePath)
+            writeFile(filePath, fileSource)
+            echo "  " & fileName & fileExt
+            inc fileCount
+        echo "Files: " & $fileCount
     
     echo ""
     echo "Project created successfully!"
@@ -129,4 +174,4 @@ proc handleCreate*(params: StringTableRef) =
     echo "GCP Project ID: " & profileCreds.projectId
     if finalParentId != "":
         echo "Parent ID: " & finalParentId
-    echo "Config saved to: " & configPath
+    echo "Location: " & rootDir
